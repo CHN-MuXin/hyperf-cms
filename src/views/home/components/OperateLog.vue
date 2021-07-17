@@ -61,11 +61,11 @@ export default {
     handleSizeChange(val) {
       this.listQuery.cur_page = 1
       this.listQuery.page_size = val
-      this.$parent().getHomeData()
+      this.$parent.$parent.$parent.getHomeData()
     },
     handleCurrentChange(val) {
       this.listQuery.cur_page = val
-      this.$parent().getHomeData()
+      this.$parent.$parent.$parent.getHomeData()
     },
   },
 }
