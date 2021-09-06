@@ -276,7 +276,7 @@ import Setting from './components/Setting'
 import GroupTool from './components/GroupTool'
 import CreateGroup from './components/CreateGroup'
 import ForwardTool from './components/ForwardTool'
-import { download } from '@/utils/file'
+import { download, fileByBase64 } from '@/utils/file'
 import init from './mixin/init'
 import message from './mixin/message'
 import mounted from './mixin/mounted'
@@ -315,6 +315,7 @@ export default {
   data() {
     return {
       path: process.env.WS_API,
+      recorder: false,
       IMUI: '',
       filterContact: '',
       user: {},

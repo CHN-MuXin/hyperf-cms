@@ -3,7 +3,13 @@
     <conditional-filter
       :listQuery.sync="listQuery"
       :defaultListQuery="defaultListQuery"
+      :columns.sync="columns"
+      :list="list"
+      :multipleSelection="multipleSelection"
       @getList="getList"
+      @handleAdd="handleAdd"
+      @handleBatchDelete="handleBatchDelete"
+      excelTitle="用户列表"
     >
       <template slot="extraForm">
         <el-form-item label="账号搜索：">
@@ -49,29 +55,17 @@
         </el-form-item>
       </template>
     </conditional-filter>
-    <el-card class="operate-container" shadow="never">
-      <i class="el-icon-tickets"></i>
-      <span>数据列表</span>
-      <el-button
-        style="float: right;"
-        icon="el-icon-plus"
-        type="primary"
-        size="mini"
-        @click="handleAddUser"
-      >创建用户</el-button>
-    </el-card>
     <div class="table-container">
       <el-table
         ref="userTable"
         :data="list"
         style="width: 100%;"
         size="mini"
-        v-loading="listLoading"
+        @selection-change="handleSelectionChange"
       >
-        <el-table-column label="UID" width="80" align="center">
-          <template slot-scope="scope">{{ scope.row.id }}</template>
-        </el-table-column>
-        <el-table-column label="用户头像" width="120" align="center">
+        <el-table-column type="selection" width="55"></el-table-column>
+        <el-table-column label="UID" width="80" align="center" prop="id" v-if="columns[0].visible"></el-table-column>
+        <el-table-column label="用户头像" width="120" align="center" v-if="columns[1].visible">
           <template slot-scope="scope">
             <image-view
               :image_url="scope.row.avatar"
@@ -80,13 +74,22 @@
             ></image-view>
           </template>
         </el-table-column>
-        <el-table-column sortable label="用户账号" width="180" prop="username" align="center">
-          <template slot-scope="scope">{{scope.row.username}}</template>
-        </el-table-column>
-        <el-table-column label="用户名称" width="150" align="center">
-          <template slot-scope="scope">{{scope.row.desc}}</template>
-        </el-table-column>
-        <el-table-column label="角色" align="center">
+        <el-table-column
+          sortable
+          label="用户账号"
+          width="180"
+          prop="username"
+          align="center"
+          v-if="columns[2].visible"
+        ></el-table-column>
+        <el-table-column
+          label="用户名称"
+          width="150"
+          align="center"
+          prop="desc"
+          v-if="columns[3].visible"
+        ></el-table-column>
+        <el-table-column label="角色" align="center" v-if="columns[4].visible">
           <template slot-scope="scope">
             <el-tag
               size="mini"
@@ -95,10 +98,14 @@
             >{{ role.description }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="邮箱" width="140" align="center">
-          <template slot-scope="scope">{{scope.row.email}}</template>
-        </el-table-column>
-        <el-table-column sortable label="状态" width="80" align="center">
+        <el-table-column
+          label="邮箱"
+          width="140"
+          align="center"
+          prop="email"
+          v-if="columns[5].visible"
+        ></el-table-column>
+        <el-table-column sortable label="状态" width="80" align="center" v-if="columns[6].visible">
           <template slot-scope="scope">
             <el-switch
               v-model="scope.row.status"
@@ -108,15 +115,30 @@
             ></el-switch>
           </template>
         </el-table-column>
-        <el-table-column label="上次登录IP" width="140" align="center">
-          <template slot-scope="scope">{{scope.row.last_ip}}</template>
-        </el-table-column>
-        <el-table-column sortable label="上次登录时间" width="200" align="center">
+        <el-table-column
+          label="上次登录IP"
+          width="140"
+          align="center"
+          prop="last_ip"
+          v-if="columns[7].visible"
+        ></el-table-column>
+        <el-table-column
+          sortable
+          label="上次登录时间"
+          width="200"
+          align="center"
+          v-if="columns[8].visible"
+        >
           <template slot-scope="scope">{{ parseTime(scope.row.last_login)}}</template>
         </el-table-column>
-        <el-table-column sortable label="创建时间" width="180" prop="last_login" align="center">
-          <template slot-scope="scope">{{ scope.row.created_at }}</template>
-        </el-table-column>
+        <el-table-column
+          sortable
+          label="创建时间"
+          width="180"
+          prop="created_at"
+          align="center"
+          v-if="columns[9].visible"
+        ></el-table-column>
         <el-table-column label="权限分配" align="center" width="150">
           <template slot-scope="scope">
             <el-button
@@ -142,7 +164,7 @@
                     icon="el-icon-edit"
                     type="primary"
                     size="mini"
-                    @click="handleEditUser(scope.$index, scope.row)"
+                    @click="handleEdit(scope.$index, scope.row)"
                   >编辑</el-button>
                 </el-dropdown-item>
                 <el-dropdown-item divided>
@@ -150,7 +172,7 @@
                     icon="el-icon-delete"
                     type="danger"
                     size="mini"
-                    @click="handleDeleteUser(scope.$index, scope.row)"
+                    @click="handleDelete(scope.$index, scope.row)"
                     v-show="scope.row.id != userId"
                   >删除</el-button>
                 </el-dropdown-item>
@@ -276,6 +298,18 @@ export default {
         },
         userId: null,
       },
+      columns: [
+        { key: 0, field: 'id', label: `UID`, visible: true },
+        { key: 1, field: 'avatar', label: `用户头像`, visible: true },
+        { key: 2, field: 'username', label: `用户账号`, visible: true },
+        { key: 3, field: 'desc', label: `用户名称`, visible: true },
+        { key: 4, field: '', label: `角色`, visible: true },
+        { key: 5, field: 'email', label: `邮箱`, visible: true },
+        { key: 6, field: 'status', label: `状态`, visible: true },
+        { key: 7, field: 'last_ip', label: `上次登录IP`, visible: true },
+        { key: 8, field: 'last_login', label: `上次登录时间`, visible: true },
+        { key: 9, field: 'created_at', label: `创建时间`, visible: true },
+      ],
       userId: store.getters.userId,
     }
   },
@@ -293,8 +327,8 @@ export default {
     this.getList()
   },
   methods: {
-    updateView(e) {
-      this.$forceUpdate()
+    handleSelectionChange(val) {
+      this.multipleSelection = val
     },
     // 编辑用户功能权限
     handleViewPermission(row) {
@@ -323,7 +357,7 @@ export default {
         }
       })
     },
-    handleAddUser() {
+    handleAdd() {
       this.userDetailDialogData.userDetailDialogVisible = true
       this.userDetailDialogData.statusOptions = this.statusOptions
       this.userDetailDialogData.sexOptions = this.sexOptions
@@ -331,7 +365,7 @@ export default {
       this.userDetailDialogData.isEdit = false
       this.$refs['userDetail'].getUserInfo()
     },
-    handleEditUser(index, row) {
+    handleEdit(index, row) {
       this.userDetailDialogData.userDetailDialogVisible = true
       this.userDetailDialogData.statusOptions = this.statusOptions
       this.userDetailDialogData.sexOptions = this.sexOptions
@@ -340,22 +374,19 @@ export default {
       this.userDetailDialogData.userId = row.id
       this.$refs['userDetail'].getUserInfo()
     },
-    handleDeleteUser(index, row) {
+    handleDelete(index, row) {
       this.deleteUser(row.id)
     },
-    handleSizeChange(val) {
-      this.listQuery.cur_page = 1
-      this.listQuery.page_size = val
-      this.getList()
-    },
-    handleCurrentChange(val) {
-      this.listQuery.cur_page = val
-      this.getList()
+    handleBatchDelete() {
+      let id_arr = []
+      for (let i = 0; i < this.multipleSelection.length; i++) {
+        id_arr.push(this.multipleSelection[i].id)
+      }
+      this.deleteUser(id_arr, true)
     },
     getList() {
       userList(this.listQuery).then((response) => {
         if (response.code == 200) {
-          this.listLoading = false
           this.list = response.data.list
           this.total = response.data.total
           for (let i = 0; i < this.list.length; i++) {
@@ -364,20 +395,28 @@ export default {
         }
       })
     },
-    deleteUser(id) {
+    deleteUser(id, isBatch = false) {
       this.$confirm('是否要进行该删除操作?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning',
       }).then(() => {
-        deleteUser(id).then((response) => {
-          if (response.code == 200) this.getList()
-        })
+        if (isBatch) {
+          deleteUser(0, { id: id }).then((response) => {
+            if (response.code == 200) {
+              this.multipleSelection = []
+              this.getList()
+            }
+          })
+        } else {
+          deleteUser(id).then((response) => {
+            if (response.code == 200) {
+              this.multipleSelection = []
+              this.getList()
+            }
+          })
+        }
       })
-    },
-    handleClick() {
-      this.listQuery.role_name = this.activeRole
-      this.getList()
     },
     handleStatusChange(row) {
       let text = row.status === 0 ? '停用' : '启用'
